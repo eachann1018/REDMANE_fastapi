@@ -627,4 +627,4 @@ def update_metadata(update: MetadataUpdate):
 # Run the app using Uvicorn server
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="localhost", port=8888)
+    uvicorn.run(app, host="localhost", port=3001)

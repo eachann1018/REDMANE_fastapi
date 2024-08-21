@@ -4,7 +4,7 @@ python3 -m venv env
 
 pip install fastapi uvicorn
 
-uvicorn main:app --reload --port 8888
+uvicorn main:app --reload --port 3001
 
 
 # Works with Nuxt

@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException
 import sqlite3
 from typing import List
-from classes import (
+from app.schemas.schemas import (
     RawFileCreate,
 )
 from fastapi.responses import RedirectResponse
 
-from classes import (
+from app.schemas.schemas import (
     Project,
     Dataset,
     DatasetMetadata,

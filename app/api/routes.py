@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Query
 import sqlite3
 from typing import List
 from app.schemas.schemas import (
@@ -239,27 +240,37 @@ async def get_samples_per_patient(sample_id: int, project_id: int):
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 # Route to fetch all patients with sample counts
-@router.get("/patients/{patient_id}", response_model=List[PatientWithSampleCount])
-async def get_patients(project_id: int, patient_id: int):
+@router.get("/patients/", response_model=List[PatientWithSampleCount])
+async def get_patients(
+    project_id: Optional[int] = Query(None, description="Filter by project ID")
+):
     try:
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
-        # Query to fetch all patients with sample counts
-        cursor.execute('''
+        # Base query to fetch all patients with sample counts
+        query = '''
             SELECT patients.id, patients.project_id, patients.ext_patient_id, patients.ext_patient_url,
                    patients.public_patient_id, COUNT(samples.id) AS sample_count
             FROM patients
             LEFT JOIN samples ON patients.id = samples.patient_id
-            WHERE patients.project_id = ?
-            GROUP BY patients.id
-            ORDER BY patients.id
-        ''', (project_id,))
+        '''
+        params = []
 
+        # Append conditions based on the presence of project_id
+        if project_id is not None:
+            query += ' WHERE patients.project_id = ?'
+            params.append(project_id)
         
+        # Complete the query
+        query += ' GROUP BY patients.id ORDER BY patients.id'
+
+        # Execute the query
+        cursor.execute(query, params)
         rows = cursor.fetchall()
         conn.close()
         
+        # Process the results
         patients = []
         for row in rows:
             patients.append({
@@ -287,18 +298,29 @@ async def get_projects():
     return [Project(id=row[0], name=row[1], status=row[2]) for row in rows]
 
 # Route to fetch all datasets
-@router.get("/datasets/{dataset_id}", response_model=List[Dataset])
-async def get_datasets(dataset_id: int, project_id: int):
+@router.get("/datasets/", response_model=List[Dataset])
+async def get_datasets(
+    project_id: Optional[int] = Query(None, description="Filter by project ID"),
+    dataset_id: Optional[int] = Query(None, description="Filter by dataset ID")
+):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    if dataset_id != 0:
-        cursor.execute('''SELECT id, project_id, name FROM datasets where project_id = ? and dataset_id = ?''', (project_id,dataset_id,))
-    else:
-        cursor.execute('''SELECT id, project_id, name FROM datasets where project_id = ?''', (project_id,))
 
+    query = "SELECT id, project_id, name FROM datasets WHERE 1=1"
+    params = []
 
+    if project_id is not None:
+        query += " AND project_id = ?"
+        params.append(project_id)
+    
+    if dataset_id is not None:
+        query += " AND id = ?"
+        params.append(dataset_id)
+
+    cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
+    
     return [Dataset(id=row[0], project_id=row[1], name=row[2]) for row in rows]
 
 # Endpoint to fetch dataset details and metadata by dataset_id

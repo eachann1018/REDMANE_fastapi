@@ -31,7 +31,11 @@ Data Commons is a web application using a fastAPI backend.
 
 3. **Run server:**
 
-   Using npm:
+   Connect to venv
+   ```bash
+   source env/bin/activate
+   ```
+
    ```bash
    uvicorn app.main:app --reload --port 8888
    ```

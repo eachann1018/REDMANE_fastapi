@@ -66,7 +66,7 @@ REDMANE_fastapi/
 
    Using npm:
    ```bash
-   pip install fastapi uvicorn
+   pip install fastapi uvicorn psycopg2
    ```
 
 3. **Run server:**

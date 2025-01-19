@@ -1,16 +1,17 @@
-import sqlite3
+import psycopg2
+from psycopg2 import sql
 
-DATABASE = 'data/data_redmane.db'
+DATABASE = "postgresql://username:password@localhost:5432/readmedatabase"
 
 def init_db():
     try:
-        conn = sqlite3.connect(DATABASE)
+        conn = psycopg2.connect(DATABASE)
         cur = conn.cursor()
 
         # Create tables
         cur.execute('''
         CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             status TEXT
         );
@@ -18,7 +19,7 @@ def init_db():
 
         cur.execute('''
         CREATE TABLE IF NOT EXISTS datasets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             project_id INTEGER NOT NULL,
             name TEXT,
             FOREIGN KEY (project_id) REFERENCES projects(id)
@@ -27,7 +28,7 @@ def init_db():
 
         cur.execute('''
         CREATE TABLE IF NOT EXISTS datasets_metadata (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             dataset_id INTEGER NOT NULL,
             key TEXT NOT NULL,
             value TEXT NOT NULL,
@@ -37,7 +38,7 @@ def init_db():
 
         cur.execute('''
         CREATE TABLE IF NOT EXISTS patients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             project_id INTEGER NOT NULL,
             ext_patient_id TEXT,
             ext_patient_url TEXT,
@@ -48,7 +49,7 @@ def init_db():
 
         cur.execute('''
         CREATE TABLE IF NOT EXISTS patients_metadata (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             patient_id INTEGER NOT NULL,
             key TEXT,
             value TEXT,
@@ -58,7 +59,7 @@ def init_db():
 
         cur.execute('''
         CREATE TABLE IF NOT EXISTS samples (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             patient_id INTEGER NOT NULL,
             ext_sample_id TEXT,
             ext_sample_url TEXT,
@@ -68,7 +69,7 @@ def init_db():
 
         cur.execute('''
         CREATE TABLE IF NOT EXISTS samples_metadata (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             sample_id INTEGER NOT NULL,
             key TEXT,
             value TEXT,
@@ -78,7 +79,7 @@ def init_db():
 
         cur.execute('''
         CREATE TABLE IF NOT EXISTS raw_files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             dataset_id INTEGER NOT NULL,
             path TEXT,
             FOREIGN KEY (dataset_id) REFERENCES datasets(id)
@@ -87,7 +88,7 @@ def init_db():
 
         cur.execute('''
         CREATE TABLE IF NOT EXISTS raw_files_metadata (
-            metadata_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            metadata_id SERIAL PRIMARY KEY,
             raw_file_id INTEGER,
             metadata_key TEXT NOT NULL,
             metadata_value TEXT NOT NULL,
@@ -100,4 +101,5 @@ def init_db():
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
-        conn.close()
+        if 'conn' in locals():
+            conn.close()

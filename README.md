@@ -54,6 +54,21 @@ REDMANE_fastapi/
 
 ## Installation
 
+### Database Creation
+
+1. Make sure you have installed PostgreSql on your device
+2. Login in to your own account in psql shell
+3. In psql interface type:
+   ````bash
+   CREATE DATABASE readmedatabase;
+   CREATE USER username WITH PASSWORD 'password';
+   GRANT ALL PRIVILEGES ON DATABASE mydatabase TO username;
+   GRANT ALL ON SCHEMA public TO username;
+   ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO username;
+   ````
+   
+   
+
 ### Setup Instructions
 
 1. **Create a python virtual environment:**

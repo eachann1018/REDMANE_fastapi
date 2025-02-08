@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import init_db
 from app.api.routes import router as api_router
+from app.routers import auth
 
 app = FastAPI()
 
@@ -19,8 +20,18 @@ app.add_middleware(
 init_db()
 
 app.include_router(api_router)
+app.include_router(auth.router)
 
 # Run the app using Uvicorn server
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8888)
+
+# 允许跨域访问（CORS 配置，开发阶段可以允许所有）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

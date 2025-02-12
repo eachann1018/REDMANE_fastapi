@@ -27,7 +27,6 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8888)
 
-# 允许跨域访问（CORS 配置，开发阶段可以允许所有）
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

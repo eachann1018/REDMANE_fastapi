@@ -9,34 +9,34 @@ from cryptography.hazmat.primitives import serialization
 
 router = APIRouter()
 
-# Keycloak 配置
-KEYCLOAK_URL = "http://localhost:8080"  # 你的 Keycloak 服务器地址
-REALM = "MyRealm"  # 你的 Realm 名称
-CLIENT_ID = "fastapi-client"  # 你的 Keycloak 客户端 ID
+# Keycloak configuration
+KEYCLOAK_URL = "http://localhost:8080"  # Your Keycloak server address
+REALM = "WEHI"  # Your Realm name
+CLIENT_ID = "fastapi-client"  # Your Keycloak client ID
 
-# 配置 OAuth2 认证，FastAPI 会自动从请求中解析 Bearer Token
+# Configure OAuth2 authentication, FastAPI will automatically parse the Bearer Token from the request
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/token")
 
 
 def get_keycloak_public_key():
-    """ 获取 Keycloak 的公钥（JWK 转 PEM） """
+    """ Retrieve the Keycloak public key (JWK to PEM) """
     jwks_url = f"{KEYCLOAK_URL}/realms/{REALM}/protocol/openid-connect/certs"
     response = requests.get(jwks_url)
     if response.status_code != 200:
-        raise HTTPException(status_code=500, detail="无法获取 Keycloak 公钥")
+        raise HTTPException(status_code=500, detail="Failed to fetch Keycloak public key")
 
     jwks = response.json()
     if "keys" not in jwks or len(jwks["keys"]) == 0:
-        raise HTTPException(status_code=500, detail="Keycloak 未返回任何公钥")
+        raise HTTPException(status_code=500, detail="Keycloak did not return any public keys")
 
-    # 获取第一个密钥
+    # Retrieve the first key
     key = jwks["keys"][0]
 
-    # 需要用 Base64 URL 解析 `n` 和 `e`
+    # Decode `n` and `e` from Base64 URL
     n = int.from_bytes(base64.urlsafe_b64decode(key["n"] + "=="), byteorder="big")
     e = int.from_bytes(base64.urlsafe_b64decode(key["e"] + "=="), byteorder="big")
 
-    # 生成 RSA 公钥
+    # Generate RSA public key
     public_key = RSAPublicNumbers(e, n).public_key()
 
     return public_key.public_bytes(
@@ -46,25 +46,25 @@ def get_keycloak_public_key():
 
 
 def verify_token(token: str = Security(oauth2_scheme)):
-    """ 验证从 Keycloak 获取的 JWT Token """
+    """ Verify the JWT Token obtained from Keycloak """
     try:
         public_key = get_keycloak_public_key()
         decoded_token = jwt.decode(
             token,
             public_key,
             algorithms=["RS256"],
-            audience=CLIENT_ID,  # 确保 CLIENT_ID 作为 `aud`，如果报错可尝试 `options={"verify_aud": False}`
-            options={"verify_aud": False}  # 临时忽略 `audience` 校验
+            audience=CLIENT_ID,  # Ensure CLIENT_ID is present as `aud`, if an error occurs, try `options={"verify_aud": False}`
+            options={"verify_aud": False}  # Temporarily disable `audience` verification
         )
-        return decoded_token  # 返回解析后的 Token（包含用户信息）
+        return decoded_token  # Return the decoded Token (containing user information)
 
     except JWTError:
-        raise HTTPException(status_code=401, detail="Token 无效")
+        raise HTTPException(status_code=401, detail="Invalid Token")
 
 
 @router.get("/auth/")
 async def get_user(token: dict = Depends(verify_token)):
-    """ 通过 Token 获取用户信息 """
+    """ Retrieve user information via Token """
     return {
         "user_id": token["sub"],
         "email": token.get("email"),

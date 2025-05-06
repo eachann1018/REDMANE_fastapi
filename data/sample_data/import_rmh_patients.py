@@ -25,7 +25,7 @@ cur = conn.cursor()
 with open(csv_file, newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     
-    # Insert data into th\De patients and patients_metadata tables
+    # Insert data into the patients and patients_metadata tables
     for row in reader:
         # Insert into patients table
         cur.execute('''

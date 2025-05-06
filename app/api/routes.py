@@ -39,16 +39,13 @@ def get_connection():
     """
     Helper function to get a new connection to your PostgreSQL database.
     """
-    conn = psycopg2.connect(
+    return psycopg2.connect(
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
         host=DB_HOST,
         port=DB_PORT
     )
-    # Ensure the default schema is used
-    conn.cursor().execute("SET search_path TO public;")
-    return conn
 
 
 @router.post("/add_files/")

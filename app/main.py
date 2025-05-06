@@ -17,6 +17,7 @@ app.add_middleware(
 )
 
 # Call the function to initialize the database
+# Comment out to not use database.py to create tables
 init_db()
 
 app.include_router(api_router)

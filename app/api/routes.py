@@ -5,8 +5,9 @@ from fastapi.responses import RedirectResponse
 import psycopg2
 from psycopg2 import Error
 
+
 from app.schemas.schemas import (
-    RawFileCreate,
+    FileCreate,
     Project,
     Dataset,
     DatasetMetadata,
@@ -18,15 +19,15 @@ from app.schemas.schemas import (
     SampleMetadata,
     Sample,
     SampleWithoutPatient,
-    RawFileResponse,
+    FileResponse,
     PatientWithSamples,
-    RawFileMetadataCreate,
+    FileMetadataCreate,
     MetadataUpdate,
 )
 
 # Replace with your actual connection details
 DB_NAME = "readmedatabase"
-DB_USER = "username"
+DB_USER = "postgres"
 DB_PASSWORD = "password"
 DB_HOST = "localhost"
 DB_PORT = "5432"
@@ -38,52 +39,50 @@ def get_connection():
     """
     Helper function to get a new connection to your PostgreSQL database.
     """
-    return psycopg2.connect(
+    conn = psycopg2.connect(
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
         host=DB_HOST,
         port=DB_PORT
     )
+    # Ensure the default schema is used
+    conn.cursor().execute("SET search_path TO public;")
+    return conn
 
 
-@router.post("/add_raw_files/")
-async def add_raw_files(raw_files: List[RawFileCreate]):
-    """
-    Insert new raw_files (and associated metadata) into the DB.
-    """
+@router.post("/add_files/")
+async def add_files(files: List[FileCreate]):
     try:
         conn = get_connection()
         cursor = conn.cursor()
 
-        raw_file_ids = []
-        for raw_file in raw_files:
-            # Use RETURNING id to get the auto-incremented ID in PostgreSQL
+        file_ids = []
+        for file in files:
             cursor.execute(
                 """
-                INSERT INTO raw_files (dataset_id, path)
-                VALUES (%s, %s)
+                INSERT INTO files (dataset_id, path, file_type)
+                VALUES (%s, %s, %s)
                 RETURNING id
                 """,
-                (raw_file.dataset_id, raw_file.path)
+                (file.dataset_id, file.path, file.file_type)
             )
-            raw_file_id = cursor.fetchone()[0]
-            raw_file_ids.append(raw_file_id)
+            file_id = cursor.fetchone()[0]
+            file_ids.append(file_id)
 
-            # Insert associated metadata
-            if raw_file.metadata:
-                for metadata in raw_file.metadata:
+            if file.metadata:
+                for metadata in file.metadata:
                     cursor.execute(
                         """
-                        INSERT INTO raw_files_metadata (raw_file_id, metadata_key, metadata_value)
+                        INSERT INTO files_metadata (file_id, metadata_key, metadata_value)
                         VALUES (%s, %s, %s)
                         """,
-                        (raw_file_id, metadata.metadata_key, metadata.metadata_value)
+                        (file_id, metadata.metadata_key, metadata.metadata_value)
                     )
 
         conn.commit()
         conn.close()
-        return {"status": "success", "message": "Raw files and metadata added successfully"}
+        return {"status": "success", "message": "Files and metadata added successfully"}
 
     except Error as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
@@ -337,12 +336,10 @@ async def get_patients(
 
 @router.get("/projects/", response_model=List[Project])
 async def get_projects():
-    """
-    Fetch all projects from the database.
-    """
     try:
         conn = get_connection()
         cursor = conn.cursor()
+
         cursor.execute("SELECT id, name, status FROM projects")
         rows = cursor.fetchall()
         conn.close()
@@ -350,6 +347,8 @@ async def get_projects():
         return [Project(id=row[0], name=row[1], status=row[2]) for row in rows]
 
     except Error as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
@@ -435,29 +434,29 @@ async def get_dataset_with_metadata(dataset_id: int, project_id: int):
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
-@router.get("/raw_files_with_metadata/{dataset_id}", response_model=List[RawFileResponse])
-async def get_raw_files_with_metadata(dataset_id: int):
+@router.get("/files_with_metadata/{dataset_id}", response_model=List[FileResponse])
+async def get_files_with_metadata(dataset_id: int):
     """
-    Fetch raw_files within a dataset, along with any related sample metadata.
+    Fetch files within a dataset, along with any related sample metadata (based on sample_id stored as metadata).
     """
     try:
         conn = get_connection()
         cursor = conn.cursor()
 
-        # Query raw files and the sample relationship from raw_files_metadata
+        # Query files and the sample relationship from files_metadata
         query = """
-            SELECT rf.id, rf.path, rfm.metadata_value AS sample_id, s.ext_sample_id
-            FROM raw_files rf
-            LEFT JOIN raw_files_metadata rfm ON rf.id = rfm.raw_file_id
-            LEFT JOIN samples s ON rfm.metadata_value = s.id
-            WHERE rf.dataset_id = %s AND rfm.metadata_key = 'sample_id'
+            SELECT f.id, f.path, fm.metadata_value AS sample_id, s.ext_sample_id
+            FROM files f
+            LEFT JOIN files_metadata fm ON f.id = fm.file_id
+            LEFT JOIN samples s ON fm.metadata_value = CAST(s.id AS TEXT)
+            WHERE f.dataset_id = %s AND fm.metadata_key = 'sample_id'
         """
         cursor.execute(query, (dataset_id,))
-        raw_files = cursor.fetchall()
+        files = cursor.fetchall()
 
         response = []
 
-        for (raw_file_id, path, sample_id, ext_sample_id) in raw_files:
+        for (file_id, path, sample_id, ext_sample_id) in files:
             # Fetch sample metadata
             cursor.execute(
                 """
@@ -477,10 +476,10 @@ async def get_raw_files_with_metadata(dataset_id: int):
                     'value': row[3]
                 })
 
-            response.append(RawFileResponse(
-                id=raw_file_id,
+            response.append(FileResponse(
+                id=file_id,
                 path=path,
-                sample_id=sample_id,
+                sample_id=int(sample_id) if sample_id is not None else None,
                 ext_sample_id=ext_sample_id,
                 sample_metadata=sample_metadata_list
             ))
@@ -496,7 +495,7 @@ async def get_raw_files_with_metadata(dataset_id: int):
 def update_metadata(update: MetadataUpdate):
     """
     Update specific metadata fields in the datasets_metadata table:
-      - raw_file_extension_size_of_all_files
+      - file_extension_size_of_all_files
       - last_size_update
     for the given dataset_id.
     """
@@ -504,13 +503,13 @@ def update_metadata(update: MetadataUpdate):
         conn = get_connection()
         cursor = conn.cursor()
 
-        # 1) Update or insert 'raw_file_extension_size_of_all_files'
-        if update.raw_file_size:
+        # 1) Update or insert 'file_extension_size_of_all_files'
+        if update.file_size:
             cursor.execute(
                 """
                 SELECT id, value
                 FROM datasets_metadata
-                WHERE key = 'raw_file_extension_size_of_all_files'
+                WHERE key = 'file_extension_size_of_all_files'
                   AND dataset_id = %s
                 """,
                 (update.dataset_id,)
@@ -524,15 +523,15 @@ def update_metadata(update: MetadataUpdate):
                     SET value = %s
                     WHERE id = %s
                     """,
-                    (update.raw_file_size, record_id)
+                    (update.file_size, record_id)
                 )
             else:
                 cursor.execute(
                     """
                     INSERT INTO datasets_metadata (dataset_id, key, value)
-                    VALUES (%s, 'raw_file_extension_size_of_all_files', %s)
+                    VALUES (%s, 'file_extension_size_of_all_files', %s)
                     """,
-                    (update.dataset_id, update.raw_file_size)
+                    (update.dataset_id, update.file_size)
                 )
 
         # 2) Update or insert 'last_size_update'

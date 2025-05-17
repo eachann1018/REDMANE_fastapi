@@ -25,7 +25,7 @@ REDMANE_fastapi/
 │   └── main.py                     # Entry point for the FastAPI application
 ├── data/
 │   ├── REDMANE_fastapi_public_data/
-│   │   ├── readmedatabase.sql          # PostgreSQL to set up database
+│   │   ├── readmedatabase.sql      # PostgreSQL to set up database
 │   ├── sample_data/                # Sample datasets and scripts for testing
 │   │   ├── clear_patients_and_samples.sh  # Script to clear sample data
 │   │   ├── import_onj_patients.py  # Script to import ONJ patients

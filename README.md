@@ -19,14 +19,13 @@ REDMANE_fastapi/
 ├── app/
 │   │   ├── __init__.py             # Initializes the API package
 │   │   └── routes.py               # Defines API endpoints
-│   ├── db/
-│   │   ├── __init__.py             # Initializes the database package
-│   │   └── database.py             # Sets up and initializes the SQLite database
 │   ├── schemas/
 │   │   ├── __init__.py             # Initializes the schemas package
 │   │   └── schemas.py              # Defines Pydantic models for data validation
 │   └── main.py                     # Entry point for the FastAPI application
 ├── data/
+│   ├── REDMANE_fastapi_public_data/
+│   ├── readmedatabase.sql          # PostgreSQL to set up database
 │   ├── sample_data/                # Sample datasets and scripts for testing
 │   │   ├── clear_patients_and_samples.sh  # Script to clear sample data
 │   │   ├── import_onj_patients.py  # Script to import ONJ patients

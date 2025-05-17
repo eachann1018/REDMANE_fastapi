@@ -74,6 +74,24 @@ ALTER TABLE public.datasets_metadata OWNER TO postgres;
 -- Name: datasets_metadata_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
+      # Define the base path
+      base_path <- "/vast/projects/TDE/TDE0005/"
+
+      # Define the raw file array
+      raw_file_array <- c(
+        "./raw_data/batch1_test_LC_Sample1.fastq",
+  "./raw_data/batch1_test_LC_Sample2.fastq",
+  "./raw_data/batch1_test_LC_Sample3.fastq",
+  "./raw_data/batch1_test_LC_Sample4.fastq",
+  "./raw_data/batch1_test_LC_Sample5.fastq"
+      )
+
+      # Combine paths
+      file_paths <- paste(base_path, raw_file_array, sep = "")
+
+      # Print the file paths
+      print(file_paths)
+
 CREATE SEQUENCE public.datasets_metadata_id_seq
     AS integer
     START WITH 1

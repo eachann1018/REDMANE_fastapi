@@ -93,9 +93,10 @@ REDMANE_fastapi/
    ```bash
    uvicorn app.main:app --reload --port 8888
    ```
-=======
-https://github.com/WEHI-ResearchComputing/REDMANE_nuxt
+   
+# Works with Nuxt
 
+https://github.com/WEHI-ResearchComputing/REDMANE_nuxt
 
 # Public data
 
